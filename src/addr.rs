@@ -1,11 +1,15 @@
+use bytes::Bytes;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+use uuid::Uuid;
 use std::{fmt, net::{IpAddr, Ipv4Addr, Ipv6Addr}, str::FromStr};
-use anyhow::{anyhow, Result};
-use serde::{Serialize, Deserialize};
-use crate::protocol::Protocol;
+use crate::{protocol::Protocol, error::StackAddrError};
 
 /// A stack address that contains a stack of protocols.
 /// The stack address can be used to represent a network address with multiple protocols.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct StackAddr {
     stack: Vec<Protocol>,
 }
@@ -26,6 +30,12 @@ impl StackAddr {
     pub fn with(mut self, p: Protocol) -> Self {
         self.stack.push(p);
         self
+    }
+    /// Create a stack address with the given protocol parts.
+    pub fn from_parts<I: IntoIterator<Item = Protocol>>(parts: I) -> Self {
+        StackAddr {
+            stack: parts.into_iter().collect(),
+        }
     }
     /// Create a stack address with the given IP address.
     pub fn with_ip(ip_addr: IpAddr) -> Self {
@@ -62,6 +72,11 @@ impl StackAddr {
     /// Get the protocol stack of the stack address.
     pub fn stack(&self) -> &[Protocol] {
         &self.stack
+    }
+
+    /// Get an iterator over the protocols in the stack address.
+    pub fn iter(&self) -> impl Iterator<Item = &Protocol> {
+        self.stack.iter()
     }
 
     /// Push a protocol to the stack address.
@@ -190,6 +205,11 @@ impl StackAddr {
         }
         false
     }
+
+    /// Check if the stack address is empty.
+    pub fn is_empty(&self) -> bool {
+        self.stack.is_empty()
+    }
     
 }
 
@@ -203,76 +223,203 @@ impl fmt::Display for StackAddr {
 }
 
 impl FromStr for StackAddr {
-    type Err = anyhow::Error;
+    type Err = StackAddrError;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut protocols = Vec::new();
         let mut parts = s.split('/').filter(|p| !p.is_empty());
 
         while let Some(proto) = parts.next() {
             let protocol = match proto {
+                "mac" => {
+                    let val = parts.next().ok_or(StackAddrError::MissingPart("mac address"))?;
+                    let mac = val.parse().map_err(|_| StackAddrError::InvalidEncoding("mac address"))?;
+                    Protocol::Mac(mac)
+                }
                 "ip4" => {
-                    let addr = parts.next().ok_or_else(|| anyhow!("Missing ip4 address"))?;
+                    let addr = parts.next().ok_or(StackAddrError::MissingPart("ip4 address"))?;
                     Protocol::Ip4(addr.parse()?)
                 }
                 "ip6" => {
-                    let addr = parts.next().ok_or_else(|| anyhow!("Missing ip6 address"))?;
+                    let addr = parts.next().ok_or(StackAddrError::MissingPart("ip6 address"))?;
                     Protocol::Ip6(addr.parse()?)
                 }
                 "dns" => {
-                    let name = parts.next().ok_or_else(|| anyhow!("Missing dns name"))?;
+                    let name = parts.next().ok_or(StackAddrError::MissingPart("dns name"))?;
                     Protocol::Dns(name.to_string())
                 }
                 "dns4" => {
-                    let name = parts.next().ok_or_else(|| anyhow!("Missing dns4 name"))?;
+                    let name = parts.next().ok_or(StackAddrError::MissingPart("dns4 name"))?;
                     Protocol::Dns4(name.to_string())
                 }
                 "dns6" => {
-                    let name = parts.next().ok_or_else(|| anyhow!("Missing dns6 name"))?;
+                    let name = parts.next().ok_or(StackAddrError::MissingPart("dns6 name"))?;
                     Protocol::Dns6(name.to_string())
                 }
                 "tcp" => {
-                    let port = parts.next().ok_or_else(|| anyhow!("Missing tcp port"))?;
+                    let port = parts.next().ok_or(StackAddrError::MissingPart("tcp port"))?;
                     Protocol::Tcp(port.parse()?)
                 }
                 "udp" => {
-                    let port = parts.next().ok_or_else(|| anyhow!("Missing udp port"))?;
+                    let port = parts.next().ok_or(StackAddrError::MissingPart("udp port"))?;
                     Protocol::Udp(port.parse()?)
                 }
                 "quic" => Protocol::Quic,
                 "http" => Protocol::Http,
                 "https" => Protocol::Https,
                 "ws" => {
-                    let port = parts.next().ok_or_else(|| anyhow!("Missing ws port"))?;
+                    let port = parts.next().ok_or(StackAddrError::MissingPart("ws port"))?;
                     Protocol::Ws(port.parse()?)
                 }
                 "wss" => {
-                    let port = parts.next().ok_or_else(|| anyhow!("Missing wss port"))?;
+                    let port = parts.next().ok_or(StackAddrError::MissingPart("wss port"))?;
                     Protocol::Wss(port.parse()?)
                 }
-                "webtransport" => {
-                    let port = parts.next().ok_or_else(|| anyhow!("Missing webtransport port"))?;
+                "webtransport" | "wtr" => {
+                    let port = parts.next().ok_or(StackAddrError::MissingPart("webtransport port"))?;
                     Protocol::WebTransport(port.parse()?)
                 }
+                "node" => {
+                    let val = parts.next().ok_or(StackAddrError::MissingPart("node id"))?;
+                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, val)
+                        .ok_or(StackAddrError::InvalidEncoding("base32 in node"))?;
+                    Protocol::NodeId(Bytes::from(decoded))
+                }
+                "peer" => {
+                    let val = parts.next().ok_or(StackAddrError::MissingPart("peer id"))?;
+                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, val)
+                        .ok_or(StackAddrError::InvalidEncoding("base32 in peer"))?;
+                    Protocol::PeerId(Bytes::from(decoded))
+                }
                 "identity" => {
-                    let kind = parts.next().ok_or_else(|| anyhow!("Missing identity kind"))?;
-                    let encoded = parts.next().ok_or_else(|| anyhow!("Missing identity value"))?;
-                    let id = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded)
-                        .ok_or_else(|| anyhow!("Invalid base32 identity"))?;
+                    let kind = parts.next().ok_or(StackAddrError::MissingPart("identity kind"))?;
+                    let val = parts.next().ok_or(StackAddrError::MissingPart("identity value"))?;
+                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, val)
+                        .ok_or(StackAddrError::InvalidEncoding("base32 in identity"))?;
                     Protocol::Identity {
                         kind: kind.to_string(),
-                        id,
+                        id: Bytes::from(decoded),
                     }
                 }
+                "uuid" => {
+                    let val = parts.next().ok_or(StackAddrError::MissingPart("uuid value"))?;
+                    let uuid = Uuid::parse_str(val).map_err(|_| StackAddrError::InvalidEncoding("uuid"))?;
+                    Protocol::Uuid(uuid)
+                }
                 "custom" => {
-                    let name = parts.next().ok_or_else(|| anyhow!("Missing custom name"))?;
+                    let name = parts.next().ok_or(StackAddrError::MissingPart("custom name"))?;
                     Protocol::Custom(name.to_string())
                 }
-                unknown => return Err(anyhow!("Unknown protocol: {}", unknown)),
+                unknown => return Err(StackAddrError::UnknownProtocol(unknown.to_string())),
             };
             protocols.push(protocol);
         }
 
         Ok(StackAddr { stack: protocols })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::Protocol;
+
+    fn random_bytes32() -> Bytes {
+        use rand::RngCore;
+        let mut buf = [0u8; 32];
+        rand::thread_rng().fill_bytes(&mut buf);
+        Bytes::copy_from_slice(&buf)
+    }
+
+    #[test]
+    fn test_builder_and_display() {
+        let addr = StackAddr::empty()
+            .with(Protocol::Ip4("192.168.10.10".parse().unwrap()))
+            .with(Protocol::Udp(4433))
+            .with(Protocol::Quic);
+
+        assert_eq!(addr.to_string(), "/ip4/192.168.10.10/udp/4433/quic");
+    }
+
+    #[test]
+    fn test_parse_from_str() {
+        let addr: StackAddr = "/ip6/::1/tcp/8080/http".parse().unwrap();
+        assert_eq!(addr.ip().unwrap(), Ipv6Addr::LOCALHOST);
+        assert_eq!(addr.port(), Some(8080));
+    }
+
+    #[test]
+    fn test_replace_and_remove() {
+        let mut addr = StackAddr::empty()
+            .with(Protocol::Dns4("example.com".into()))
+            .with(Protocol::Tcp(80));
+
+        assert!(addr.replace(&Protocol::Tcp(80), Protocol::Tcp(443)));
+        assert_eq!(addr.port(), Some(443));
+
+        assert!(addr.remove(&Protocol::Dns4("example.com".into())));
+        assert!(addr.name().is_none());
+    }
+
+    #[test]
+    fn test_identity_query() {
+        let id = random_bytes32();
+        let addr = StackAddr::empty().with(Protocol::Identity {
+            kind: "some-p2p".to_string(),
+            id: id.clone(),
+        });
+        assert_eq!(addr.identity(), Some(&id[..]));
+    }
+
+    #[test]
+    fn test_resolved_check() {
+        let name: &str = "example.com";
+        let ip: Ipv4Addr = "192.168.1.1".parse().unwrap();
+
+        let mut a = StackAddr::with_name(name);
+        let b = StackAddr::with_ip(IpAddr::V4(ip));
+        assert!(!a.resolved());
+        assert!(b.resolved());
+
+        a.replace(&Protocol::Dns(name.to_string()), Protocol::Ip4(ip));
+        assert!(a.resolved());
+    }
+
+    #[test]
+    fn test_error_display() {
+        let err = StackAddrError::MissingPart("foo");
+        assert_eq!(err.to_string(), "Missing foo");
+    }
+
+    #[test]
+    fn test_l2_to_l4() {
+        let s = "/mac/aa:bb:cc:dd:ee:ff/ip4/192.168.1.1/tcp/8080";
+        let addr: StackAddr = s.parse().expect("parse failed");
+
+        let expected = StackAddr::new(&[
+            Protocol::Mac("aa:bb:cc:dd:ee:ff".parse().unwrap()),
+            Protocol::Ip4("192.168.1.1".parse().unwrap()),
+            Protocol::Tcp(8080),
+        ]);
+
+        assert_eq!(addr, expected);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_serde() {
+        let id = random_bytes32();
+        let addr = StackAddr::new(&[
+            Protocol::Mac("00:11:22:33:44:55".parse().unwrap()),
+            Protocol::Ip4("10.0.0.1".parse().unwrap()),
+            Protocol::Udp(4433),
+            Protocol::Quic,
+            Protocol::NodeId(id),
+        ]);
+
+        let json = serde_json::to_string(&addr).unwrap();
+        let decoded: StackAddr = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(addr, decoded);
     }
 }
