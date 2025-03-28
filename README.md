@@ -7,14 +7,18 @@
 # stackaddr [![Crates.io][crates-badge]][crates-url] ![License][license-badge]
 Self-describing, layered address representation library, designed with flexibility and extensibility.
 
-`stackaddr` provides a type-safe, composable, and future-proof way to represent network addresses and protocol stacks.  
+`stackaddr` provides a type-safe, composable, and future-proof way to represent complex address stacks, including transport protocols, cryptographic identities, metadata, and resource paths.  
 
 ## Features
-- Layered protocol stack: supports multiple encapsulated protocols (e.g. `/ip4/127.0.0.1/udp/4433/quic`)
-    - Supports from L2 (MAC) to application-level protocols (e.g. `/mac/aa:bb:cc:dd:ee:ff/ip4/192.168.1.1/tcp/80/http`)
-- Identity aware: supports cryptographic identities like NodeId, PeerId, and UUID
-- Strong typing: no ambiguity between TCP/UDP/DNS/etc.
-- Serde support(optional): enable with `features = ["serde"]`
+- **Segment-based architecture**: each address consists of typed [`Segment`]s
+    - Protocols like `/ip4`, `/tcp`, `/tls`, `/http`
+    - Identities like `/node/<base32>`, `/uuid/<uuid>`
+    - Metadata like `/meta/env/production`
+    - Path-like entries like `/foo/bar`
+- **Layered from L2 to L7**: supports MAC, IP, TCP/UDP, TLS, HTTP, and more
+    - `/ip4/127.0.0.1/udp/4433/quic`
+    - `/mac/aa:bb:cc:dd:ee:ff/ip4/192.168.1.1/tcp/80/http`
+- serde support(optional): enable with `features = ["serde"]`
 - Easy parsing: implements `FromStr`, `Display`, and error types for easy parsing
 
 ## Usage
@@ -33,48 +37,45 @@ stackaddr = { version = "0.1", features = ["serde"] }
 ## Example
 Basic:
 ```rust
-use stackaddr::{StackAddr, Protocol};
+use stackaddr::{StackAddr, Protocol, Segment};
 
-let addr = StackAddr::new(&[
-    Protocol::Ip4("192.168.10.1".parse().unwrap()),
-    Protocol::Tcp(443),
-    Protocol::Https,
+let addr = StackAddr::from_parts(&[
+    Segment::Protocol(Protocol::Ip4("192.168.1.1".parse().unwrap())),
+    Segment::Protocol(Protocol::Tcp(443)),
+    Segment::Protocol(Protocol::Tls),
+    Segment::Protocol(Protocol::Http),
 ]);
 
 println!("{}", addr); 
-// Output: /ip4/192.168.10.1/tcp/443/https
+// Output: /ip4/192.168.1.1/tcp/443/tls/http
 ```
 
 From L2 to L4:
 ```rust
 let s = "/mac/aa:bb:cc:dd:ee:ff/ip4/192.168.1.1/tcp/8080";
 let addr: StackAddr = s.parse().expect("parse failed");
-
-let expected = StackAddr::new(&[
-    Protocol::Mac("aa:bb:cc:dd:ee:ff".parse().unwrap()),
-    Protocol::Ip4("192.168.1.1".parse().unwrap()),
-    Protocol::Tcp(8080),
-]);
-
-assert_eq!(addr, expected);
-```
-
-Parsing from string:
-```rust
-let parsed: StackAddr = "/ip6/::1/tcp/8443".parse().unwrap();
-assert_eq!(parsed.port(), Some(8443));
 ```
 
 With identity:
 ```rust
 let public_key: [u8; 32] = generate_public_key();
 let id = Bytes::copy_from_slice(&public_key);
-let stack = StackAddr::new(&[
-    Protocol::Ip4("192.168.10.10".parse().unwrap()),
-    Protocol::Udp(4433),
-    Protocol::Quic,
-    Protocol::NodeId(id),
+let addr = StackAddr::from_parts(&[
+    Segment::Protocol(Protocol::Ip4("192.168.10.10".parse().unwrap())),
+    Segment::Protocol(Protocol::Udp(4433)),
+    Segment::Protocol(Protocol::Quic),
+    Segment::Identity(Identity::NodeId(id)),
 ]);
+```
+
+With path:
+```rust
+let addr: StackAddr = "/dns/example.com/tcp/443/tls/http/images/logo.png".parse().unwrap();
+```
+
+With metadata:
+```rust
+let addr: StackAddr = "/meta/env/production".parse().unwrap();
 ```
 
 ## Acknowledgment

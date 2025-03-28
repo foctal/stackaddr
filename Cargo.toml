@@ -23,7 +23,7 @@ rand = "0.8"
 uuid = { version = "1.9", features = ["v4", "fast-rng"]}
 
 [features]
-default = ["serde"]
+#default = ["serde"]
 serde = [
     "dep:serde",
     "bytes/serde",
