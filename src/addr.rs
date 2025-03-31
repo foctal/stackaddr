@@ -3,9 +3,20 @@ use netdev::mac::MacAddr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::{
+    error::StackAddrError,
+    segment::{
+        identity::Identity,
+        protocol::{Protocol, TransportProtocol},
+        Segment,
+    },
+};
+use std::{
+    fmt,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+    str::FromStr,
+};
 use uuid::Uuid;
-use std::{fmt, net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr}, str::FromStr};
-use crate::{error::StackAddrError, segment::{identity::Identity, protocol::{Protocol, TransportProtocol}, Segment}};
 
 /// A stack address that contains a stack of protocols.
 /// The stack address can be used to represent a network address with multiple protocols.
@@ -30,7 +41,9 @@ impl StackAddr {
 
     /// Create a new `StackAddr` with no segments.
     pub fn empty() -> Self {
-        StackAddr { segments: Vec::new() }
+        StackAddr {
+            segments: Vec::new(),
+        }
     }
 
     /// Create a new `StackAddr` with a single segment.
@@ -64,14 +77,16 @@ impl StackAddr {
     /// Create a new `StackAddr` with a single metadata segment.
     /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_meta(mut self, key: &str, value: &str) -> Self {
-        self.segments.push(Segment::Metadata(key.to_string(), value.to_string()));
+        self.segments
+            .push(Segment::Metadata(key.to_string(), value.to_string()));
         self
     }
 
     /// Create a new `StackAddr` with a MAC address segment.
     /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_mac(mut self, addr: &str) -> Self {
-        self.segments.push(Segment::Protocol(Protocol::Mac(addr.parse().unwrap())));
+        self.segments
+            .push(Segment::Protocol(Protocol::Mac(addr.parse().unwrap())));
         self
     }
 
@@ -102,21 +117,24 @@ impl StackAddr {
     /// Create a new `StackAddr` with a DNS name segment.
     /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_dns_name(mut self, name: &str) -> Self {
-        self.segments.push(Segment::Protocol(Protocol::Dns(name.to_string())));
+        self.segments
+            .push(Segment::Protocol(Protocol::Dns(name.to_string())));
         self
     }
 
     /// Create a new `StackAddr` with a DNS4 name segment.
     /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_dns4_name(mut self, name: &str) -> Self {
-        self.segments.push(Segment::Protocol(Protocol::Dns4(name.to_string())));
+        self.segments
+            .push(Segment::Protocol(Protocol::Dns4(name.to_string())));
         self
     }
 
     /// Create a new `StackAddr` with a DNS6 name segment.
     /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_dns6_name(mut self, name: &str) -> Self {
-        self.segments.push(Segment::Protocol(Protocol::Dns6(name.to_string())));
+        self.segments
+            .push(Segment::Protocol(Protocol::Dns6(name.to_string())));
         self
     }
 
@@ -214,7 +232,9 @@ impl StackAddr {
                 }
                 Segment::Protocol(Protocol::Ws(p)) => return Some(TransportProtocol::Ws(*p)),
                 Segment::Protocol(Protocol::Wss(p)) => return Some(TransportProtocol::Wss(*p)),
-                Segment::Protocol(Protocol::WebTransport(p)) => return Some(TransportProtocol::WebTransport(*p)),
+                Segment::Protocol(Protocol::WebTransport(p)) => {
+                    return Some(TransportProtocol::WebTransport(*p))
+                }
                 _ => continue,
             }
         }
@@ -290,9 +310,9 @@ impl StackAddr {
     /// Check if the stack address is resolved.
     /// A stack address is considered resolved if it contains an IP address.
     pub fn resolved(&self) -> bool {
-        self.segments.iter().any(|seg| matches!(seg,
-            Segment::Protocol(Protocol::Ip4(_) | Protocol::Ip6(_))
-        ))
+        self.segments
+            .iter()
+            .any(|seg| matches!(seg, Segment::Protocol(Protocol::Ip4(_) | Protocol::Ip6(_))))
     }
 
     /// Check if the stack address is empty.
@@ -373,51 +393,134 @@ impl FromStr for StackAddr {
 
         while let Some(part) = parts.next() {
             let seg = match part {
-                "ip4" => Segment::Protocol(Protocol::Ip4(parts.next().ok_or(StackAddrError::MissingPart("ip4 address"))?.parse()?)),
-                "ip6" => Segment::Protocol(Protocol::Ip6(parts.next().ok_or(StackAddrError::MissingPart("ip6 address"))?.parse()?)),
-                "dns" => Segment::Protocol(Protocol::Dns(parts.next().ok_or(StackAddrError::MissingPart("dns"))?.to_string())),
-                "dns4" => Segment::Protocol(Protocol::Dns4(parts.next().ok_or(StackAddrError::MissingPart("dns4"))?.to_string())),
-                "dns6" => Segment::Protocol(Protocol::Dns6(parts.next().ok_or(StackAddrError::MissingPart("dns6"))?.to_string())),
-                "mac" => Segment::Protocol(Protocol::Mac(parts.next().ok_or(StackAddrError::MissingPart("mac address"))?.parse().map_err(|_e| StackAddrError::InvalidEncoding("mac"))?)),
-                "tcp" => Segment::Protocol(Protocol::Tcp(parts.next().ok_or(StackAddrError::MissingPart("tcp port"))?.parse()?)),
-                "udp" => Segment::Protocol(Protocol::Udp(parts.next().ok_or(StackAddrError::MissingPart("udp port"))?.parse()?)),
+                "ip4" => Segment::Protocol(Protocol::Ip4(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("ip4 address"))?
+                        .parse()?,
+                )),
+                "ip6" => Segment::Protocol(Protocol::Ip6(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("ip6 address"))?
+                        .parse()?,
+                )),
+                "dns" => Segment::Protocol(Protocol::Dns(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("dns"))?
+                        .to_string(),
+                )),
+                "dns4" => Segment::Protocol(Protocol::Dns4(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("dns4"))?
+                        .to_string(),
+                )),
+                "dns6" => Segment::Protocol(Protocol::Dns6(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("dns6"))?
+                        .to_string(),
+                )),
+                "mac" => Segment::Protocol(Protocol::Mac(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("mac address"))?
+                        .parse()
+                        .map_err(|_e| StackAddrError::InvalidEncoding("mac"))?,
+                )),
+                "tcp" => Segment::Protocol(Protocol::Tcp(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("tcp port"))?
+                        .parse()?,
+                )),
+                "udp" => Segment::Protocol(Protocol::Udp(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("udp port"))?
+                        .parse()?,
+                )),
                 "tls" => Segment::Protocol(Protocol::Tls),
                 "quic" => Segment::Protocol(Protocol::Quic),
                 "http" => Segment::Protocol(Protocol::Http),
                 "https" => Segment::Protocol(Protocol::Https),
-                "ws" => Segment::Protocol(Protocol::Ws(parts.next().ok_or(StackAddrError::MissingPart("ws port"))?.parse()?)),
-                "wss" => Segment::Protocol(Protocol::Wss(parts.next().ok_or(StackAddrError::MissingPart("wss port"))?.parse()?)),
-                "wtr" => Segment::Protocol(Protocol::WebTransport(parts.next().ok_or(StackAddrError::MissingPart("wtr port"))?.parse()?)),
+                "ws" => Segment::Protocol(Protocol::Ws(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("ws port"))?
+                        .parse()?,
+                )),
+                "wss" => Segment::Protocol(Protocol::Wss(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("wss port"))?
+                        .parse()?,
+                )),
+                "wtr" => Segment::Protocol(Protocol::WebTransport(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("wtr port"))?
+                        .parse()?,
+                )),
                 "webrtc" => Segment::Protocol(Protocol::WebRTC),
-                "onion" => Segment::Protocol(Protocol::Onion(parts.next().ok_or(StackAddrError::MissingPart("onion address"))?.to_string())),
-                "custom" => Segment::Protocol(Protocol::Custom(parts.next().ok_or(StackAddrError::MissingPart("custom name"))?.to_string())),
+                "onion" => Segment::Protocol(Protocol::Onion(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("onion address"))?
+                        .to_string(),
+                )),
+                "custom" => Segment::Protocol(Protocol::Custom(
+                    parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("custom name"))?
+                        .to_string(),
+                )),
                 "node" => {
                     let encoded = parts.next().ok_or(StackAddrError::MissingPart("node id"))?;
-                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded).ok_or(StackAddrError::InvalidEncoding("base32 node id"))?;
+                    let decoded =
+                        base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded)
+                            .ok_or(StackAddrError::InvalidEncoding("base32 node id"))?;
                     Segment::Identity(Identity::NodeId(Bytes::from(decoded)))
                 }
                 "peer" => {
                     let encoded = parts.next().ok_or(StackAddrError::MissingPart("peer id"))?;
-                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded).ok_or(StackAddrError::InvalidEncoding("base32 peer id"))?;
+                    let decoded =
+                        base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded)
+                            .ok_or(StackAddrError::InvalidEncoding("base32 peer id"))?;
                     Segment::Identity(Identity::PeerId(Bytes::from(decoded)))
                 }
                 "uuid" => {
-                    let val = parts.next().ok_or(StackAddrError::MissingPart("uuid value"))?;
-                    let uuid = Uuid::parse_str(val).map_err(|_| StackAddrError::InvalidEncoding("uuid"))?;
+                    let val = parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("uuid value"))?;
+                    let uuid = Uuid::parse_str(val)
+                        .map_err(|_| StackAddrError::InvalidEncoding("uuid"))?;
                     Segment::Identity(Identity::Uuid(uuid))
                 }
                 "identity" => {
-                    let kind = parts.next().ok_or(StackAddrError::MissingPart("identity kind"))?;
-                    let encoded = parts.next().ok_or(StackAddrError::MissingPart("identity value"))?;
-                    let decoded = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded).ok_or(StackAddrError::InvalidEncoding("base32 identity"))?;
+                    let kind = parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("identity kind"))?;
+                    let encoded = parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("identity value"))?;
+                    let decoded =
+                        base32::decode(base32::Alphabet::Rfc4648 { padding: false }, encoded)
+                            .ok_or(StackAddrError::InvalidEncoding("base32 identity"))?;
                     Segment::Identity(Identity::Custom {
                         kind: kind.to_string(),
                         id: Bytes::from(decoded),
                     })
                 }
                 "meta" => {
-                    let k = parts.next().ok_or(StackAddrError::MissingPart("metadata key"))?;
-                    let v = parts.next().ok_or(StackAddrError::MissingPart("metadata value"))?;
+                    let k = parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("metadata key"))?;
+                    let v = parts
+                        .next()
+                        .ok_or(StackAddrError::MissingPart("metadata value"))?;
                     Segment::Metadata(k.to_string(), v.to_string())
                 }
                 s => Segment::Path(s.to_string()),
@@ -432,7 +535,7 @@ impl FromStr for StackAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::segment::{protocol::Protocol, identity::Identity, Segment};
+    use crate::segment::{identity::Identity, protocol::Protocol, Segment};
     use bytes::Bytes;
     use std::net::{IpAddr, Ipv6Addr};
 
@@ -471,14 +574,20 @@ mod tests {
     fn test_identity_nodeid() {
         let id = random_bytes32();
         let addr = StackAddr::empty().with_identity(Identity::NodeId(id.clone()));
-        assert_eq!(addr.segments().last(), Some(&Segment::Identity(Identity::NodeId(id))));
+        assert_eq!(
+            addr.segments().last(),
+            Some(&Segment::Identity(Identity::NodeId(id)))
+        );
     }
 
     #[test]
     fn test_identity_uuid() {
         let s = "/uuid/550e8400-e29b-41d4-a716-446655440000";
         let addr: StackAddr = s.parse().unwrap();
-        assert!(matches!(addr.segments().last(), Some(Segment::Identity(Identity::Uuid(_)))));
+        assert!(matches!(
+            addr.segments().last(),
+            Some(Segment::Identity(Identity::Uuid(_)))
+        ));
     }
 
     #[test]
@@ -487,7 +596,10 @@ mod tests {
         let encoded = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &id);
         let s = format!("/identity/myproto/{}", encoded);
         let addr: StackAddr = s.parse().unwrap();
-        assert!(matches!(addr.segments().last(), Some(Segment::Identity(Identity::Custom { .. }))));
+        assert!(matches!(
+            addr.segments().last(),
+            Some(Segment::Identity(Identity::Custom { .. }))
+        ));
     }
 
     #[test]
@@ -504,7 +616,10 @@ mod tests {
         let addr: StackAddr = "/downloads/images".parse().unwrap();
         assert_eq!(
             addr.segments(),
-            &[Segment::Path("downloads".into()), Segment::Path("images".into())]
+            &[
+                Segment::Path("downloads".into()),
+                Segment::Path("images".into())
+            ]
         );
     }
 

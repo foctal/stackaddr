@@ -17,8 +17,8 @@
 //! globally unique way.
 
 use bytes::Bytes;
-use uuid::Uuid;
 use std::fmt;
+use uuid::Uuid;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -39,10 +39,7 @@ pub enum Identity {
     /// A UUID (supports hyphenless base16 string output)
     Uuid(Uuid),
     /// A custom identity with an explicit kind and ID bytes
-    Custom {
-        kind: String,
-        id: Bytes,
-    },
+    Custom { kind: String, id: Bytes },
 }
 
 impl fmt::Display for Identity {
@@ -52,16 +49,16 @@ impl fmt::Display for Identity {
             NodeId(id) => {
                 let encoded = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, id);
                 write!(f, "/node/{}", encoded)
-            },
+            }
             PeerId(id) => {
                 let encoded = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, id);
                 write!(f, "/peer/{}", encoded)
-            },
+            }
             Uuid(uuid) => write!(f, "/uuid/{}", uuid.simple()),
             Custom { kind, id } => {
                 let encoded = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, id);
                 write!(f, "/identity/{}/{}", kind, encoded)
-            },
+            }
         }
     }
 }
