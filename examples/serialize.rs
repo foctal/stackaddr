@@ -1,12 +1,12 @@
 //! Serialize and deserialize a StackAddr using serde_json.
 
-use stackaddr::{Identity, Protocol, StackAddr};
 use bytes::Bytes;
 use serde_json;
+use stackaddr::{Identity, Protocol, StackAddr};
 
 fn main() {
     let id = Bytes::from_static(b"01234567890123456789012345678901");
-    
+
     let addr = StackAddr::empty()
         .with_protocol(Protocol::Ip4("10.0.0.1".parse().unwrap()))
         .with_protocol(Protocol::Tcp(443))

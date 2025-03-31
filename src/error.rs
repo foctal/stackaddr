@@ -1,6 +1,6 @@
 use std::fmt;
-use std::num::ParseIntError;
 use std::net::AddrParseError;
+use std::num::ParseIntError;
 
 /// An error that can occur when parsing a StackAddr string.
 #[derive(Debug)]

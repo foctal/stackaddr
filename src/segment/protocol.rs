@@ -13,8 +13,11 @@
 //!
 //! This enum is designed for composability within a [`StackAddr`](crate::StackAddr).
 
-use std::{fmt, net::{Ipv4Addr, Ipv6Addr}};
 use netdev::mac::MacAddr;
+use std::{
+    fmt,
+    net::{Ipv4Addr, Ipv6Addr},
+};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -124,7 +127,13 @@ impl TransportProtocol {
     }
     /// Check if the transport protocol is secure. (by TLS)
     pub fn is_secure(&self) -> bool {
-        matches!(self, TransportProtocol::TlsOverTcp(_) | TransportProtocol::Quic(_) | TransportProtocol::Wss(_) | TransportProtocol::WebTransport(_))
+        matches!(
+            self,
+            TransportProtocol::TlsOverTcp(_)
+                | TransportProtocol::Quic(_)
+                | TransportProtocol::Wss(_)
+                | TransportProtocol::WebTransport(_)
+        )
     }
 }
 
