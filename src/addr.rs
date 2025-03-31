@@ -1,10 +1,11 @@
 use bytes::Bytes;
+use netdev::mac::MacAddr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
-use std::{fmt, net::{IpAddr, Ipv4Addr, Ipv6Addr}, str::FromStr};
-use crate::{error::StackAddrError, segment::{identity::Identity, protocol::Protocol, Segment}};
+use std::{fmt, net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr}, str::FromStr};
+use crate::{error::StackAddrError, segment::{identity::Identity, protocol::{Protocol, TransportProtocol}, Segment}};
 
 /// A stack address that contains a stack of protocols.
 /// The stack address can be used to represent a network address with multiple protocols.
@@ -15,60 +16,81 @@ pub struct StackAddr {
 }
 
 impl StackAddr {
+    /// Create a new `StackAddr` with the given segments.
     pub fn new(segments: Vec<Segment>) -> Self {
         StackAddr { segments }
     }
 
+    /// Create a new `StackAddr` from a slice of segments.
     pub fn from_parts(segments: &[Segment]) -> Self {
         StackAddr {
             segments: segments.to_vec(),
         }
     }
 
+    /// Create a new `StackAddr` with no segments.
     pub fn empty() -> Self {
         StackAddr { segments: Vec::new() }
     }
 
+    /// Create a new `StackAddr` with a single segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with(mut self, segment: Segment) -> Self {
         self.segments.push(segment);
         self
     }
 
+    /// Create a new `StackAddr` with a single protocol segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_protocol(mut self, protocol: Protocol) -> Self {
         self.segments.push(Segment::Protocol(protocol));
         self
     }
 
+    /// Create a new `StackAddr` with a single identity segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_identity(mut self, identity: Identity) -> Self {
         self.segments.push(Segment::Identity(identity));
         self
     }
 
+    /// Create a new `StackAddr` with a single path segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_path(mut self, path: &str) -> Self {
         self.segments.push(Segment::Path(path.to_string()));
         self
     }
 
+    /// Create a new `StackAddr` with a single metadata segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_meta(mut self, key: &str, value: &str) -> Self {
         self.segments.push(Segment::Metadata(key.to_string(), value.to_string()));
         self
     }
 
+    /// Create a new `StackAddr` with a MAC address segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_mac(mut self, addr: &str) -> Self {
         self.segments.push(Segment::Protocol(Protocol::Mac(addr.parse().unwrap())));
         self
     }
 
+    /// Create a new `StackAddr` with an IPv4 address segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_ipv4(mut self, addr: Ipv4Addr) -> Self {
         self.segments.push(Segment::Protocol(Protocol::Ip4(addr)));
         self
     }
 
+    /// Create a new `StackAddr` with an IPv6 address segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_ipv6(mut self, addr: Ipv6Addr) -> Self {
         self.segments.push(Segment::Protocol(Protocol::Ip6(addr)));
         self
     }
 
+    /// Create a new `StackAddr` with an IP address segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_ip(mut self, addr: IpAddr) -> Self {
         match addr {
             IpAddr::V4(v4) => self.segments.push(Segment::Protocol(Protocol::Ip4(v4))),
@@ -77,27 +99,48 @@ impl StackAddr {
         self
     }
 
+    /// Create a new `StackAddr` with a DNS name segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
     pub fn with_dns_name(mut self, name: &str) -> Self {
         self.segments.push(Segment::Protocol(Protocol::Dns(name.to_string())));
         self
     }
 
+    /// Create a new `StackAddr` with a DNS4 name segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
+    pub fn with_dns4_name(mut self, name: &str) -> Self {
+        self.segments.push(Segment::Protocol(Protocol::Dns4(name.to_string())));
+        self
+    }
+
+    /// Create a new `StackAddr` with a DNS6 name segment.
+    /// This is a convenience method for creating a stack address with builder pattern.
+    pub fn with_dns6_name(mut self, name: &str) -> Self {
+        self.segments.push(Segment::Protocol(Protocol::Dns6(name.to_string())));
+        self
+    }
+
+    /// Returns a reference to the ordered list of segments that make up this stack address.
     pub fn segments(&self) -> &[Segment] {
         &self.segments
     }
 
+    /// Push a new segment to the stack address.
     pub fn push(&mut self, segment: Segment) {
         self.segments.push(segment);
     }
 
+    /// Pop the last segment from the stack address.
     pub fn pop(&mut self) -> Option<Segment> {
         self.segments.pop()
     }
 
+    /// Check if the stack address contains a specific segment.
     pub fn contains(&self, target: &Segment) -> bool {
         self.segments.contains(target)
     }
 
+    /// Replace the first occurrence of a segment with a new segment.
     pub fn replace(&mut self, old: &Segment, new: Segment) -> bool {
         if let Some(pos) = self.segments.iter().position(|s| s == old) {
             self.segments[pos] = new;
@@ -107,6 +150,7 @@ impl StackAddr {
         }
     }
 
+    /// Replace all occurrences of a segment with a new segment.
     pub fn replace_all(&mut self, old: &Segment, new: Segment) -> usize {
         let mut count = 0;
         for s in &mut self.segments {
@@ -118,6 +162,7 @@ impl StackAddr {
         count
     }
 
+    /// Remove the first occurrence of a segment from the stack address.
     pub fn remove(&mut self, target: &Segment) -> bool {
         if let Some(pos) = self.segments.iter().position(|s| s == target) {
             self.segments.remove(pos);
@@ -127,10 +172,66 @@ impl StackAddr {
         }
     }
 
+    /// Remove all occurrences of a segment from the stack address.
     pub fn remove_all(&mut self, target: &Segment) -> usize {
         let before = self.segments.len();
         self.segments.retain(|s| s != target);
         before - self.segments.len()
+    }
+
+    /// Returns all [`Protocol`] segments in the stack address.
+    ///
+    /// This filters out non-protocol segments such as identities, paths, and metadata.
+    pub fn protocols(&self) -> Vec<&Protocol> {
+        self.segments
+            .iter()
+            .filter_map(|seg| {
+                if let Segment::Protocol(p) = seg {
+                    Some(p)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Extract the transport protocol (if any) from the address.
+    pub fn transport(&self) -> Option<TransportProtocol> {
+        let mut port = None;
+        for seg in self.segments.iter().rev() {
+            match seg {
+                Segment::Protocol(Protocol::Tcp(p)) => port = Some(TransportProtocol::Tcp(*p)),
+                Segment::Protocol(Protocol::Udp(p)) => port = Some(TransportProtocol::Udp(*p)),
+                Segment::Protocol(Protocol::Quic) => {
+                    if let Some(TransportProtocol::Udp(p)) = port {
+                        return Some(TransportProtocol::Quic(p));
+                    }
+                }
+                Segment::Protocol(Protocol::Tls) => {
+                    if let Some(TransportProtocol::Tcp(p)) = port {
+                        return Some(TransportProtocol::TlsOverTcp(p));
+                    }
+                }
+                Segment::Protocol(Protocol::Ws(p)) => return Some(TransportProtocol::Ws(*p)),
+                Segment::Protocol(Protocol::Wss(p)) => return Some(TransportProtocol::Wss(*p)),
+                Segment::Protocol(Protocol::WebTransport(p)) => return Some(TransportProtocol::WebTransport(*p)),
+                _ => continue,
+            }
+        }
+        port
+    }
+
+    /// Get the MAC address from the stack address.
+    pub fn mac(&self) -> Option<MacAddr> {
+        for seg in &self.segments {
+            if let Segment::Protocol(p) = seg {
+                match p {
+                    Protocol::Mac(addr) => return Some(addr.clone()),
+                    _ => {}
+                }
+            }
+        }
+        None
     }
 
     pub fn ip(&self) -> Option<IpAddr> {
@@ -146,6 +247,7 @@ impl StackAddr {
         None
     }
 
+    /// Get the port number from the stack address.
     pub fn port(&self) -> Option<u16> {
         for seg in self.segments.iter().rev() {
             if let Segment::Protocol(p) = seg {
@@ -163,6 +265,14 @@ impl StackAddr {
         None
     }
 
+    /// Get the socket address from the stack address.
+    pub fn socket_addr(&self) -> Option<SocketAddr> {
+        let ip = self.ip()?;
+        let port = self.port().unwrap_or(0);
+        Some(SocketAddr::new(ip, port))
+    }
+
+    /// Get the DNS name from the stack address.
     pub fn name(&self) -> Option<&str> {
         for seg in &self.segments {
             if let Segment::Protocol(p) = seg {
@@ -177,14 +287,71 @@ impl StackAddr {
         None
     }
 
+    /// Check if the stack address is resolved.
+    /// A stack address is considered resolved if it contains an IP address.
     pub fn resolved(&self) -> bool {
         self.segments.iter().any(|seg| matches!(seg,
             Segment::Protocol(Protocol::Ip4(_) | Protocol::Ip6(_))
         ))
     }
 
+    /// Check if the stack address is empty.
     pub fn is_empty(&self) -> bool {
         self.segments.is_empty()
+    }
+
+    /// Returns the first IP protocol segment (Ip4 or Ip6) if present.
+    pub fn get_ip(&self) -> Option<&Protocol> {
+        for seg in &self.segments {
+            if let Segment::Protocol(p) = seg {
+                match p {
+                    Protocol::Ip4(_) | Protocol::Ip6(_) => return Some(p),
+                    _ => {}
+                }
+            }
+        }
+        None
+    }
+
+    /// Returns the first DNS protocol segment (Dns, Dns4, or Dns6) if present.
+    pub fn get_dns(&self) -> Option<&Protocol> {
+        for seg in &self.segments {
+            if let Segment::Protocol(p) = seg {
+                match p {
+                    Protocol::Dns(_) | Protocol::Dns4(_) | Protocol::Dns6(_) => return Some(p),
+                    _ => {}
+                }
+            }
+        }
+        None
+    }
+
+    /// Returns the first identity segment (NodeId, PeerId, UUID, or Custom) if present.
+    pub fn get_identity(&self) -> Option<&Identity> {
+        for seg in &self.segments {
+            if let Segment::Identity(id) = seg {
+                return Some(id);
+            }
+        }
+        None
+    }
+
+    /// Replace Dns/Dns4/Dns6 protocol with Ip4 or Ip6
+    /// This is used to resolve the name to an IP address
+    pub fn resolve(&mut self, ip_addr: IpAddr) {
+        for seg in &mut self.segments {
+            if let Segment::Protocol(p) = seg {
+                match p {
+                    Protocol::Dns(_) | Protocol::Dns4(_) | Protocol::Dns6(_) => {
+                        *p = match ip_addr {
+                            IpAddr::V4(addr) => Protocol::Ip4(addr),
+                            IpAddr::V6(addr) => Protocol::Ip6(addr),
+                        };
+                    }
+                    _ => {}
+                }
+            }
+        }
     }
 }
 

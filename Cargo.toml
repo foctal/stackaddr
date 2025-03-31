@@ -30,3 +30,16 @@ serde = [
     "uuid/serde",
     "netdev/serde",
 ]
+
+[[example]]
+name = "parse"
+path = "examples/parse.rs"
+
+[[example]]
+name = "stack"
+path = "examples/stack.rs"
+
+[[example]]
+name = "serialize"
+path = "examples/serialize.rs"
+required-features = ["serde"]
