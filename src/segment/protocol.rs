@@ -90,6 +90,59 @@ impl fmt::Display for Protocol {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum TransportProtocol {
+    /// TCP port
+    Tcp(u16),
+    /// UDP port
+    Udp(u16),
+    /// TLS (over TCP)
+    TlsOverTcp(u16),
+    /// QUIC (over UDP)
+    Quic(u16),
+    /// WebSocket with port
+    Ws(u16),
+    /// Secure WebSocket with port
+    Wss(u16),
+    /// WebTransport with port
+    WebTransport(u16),
+}
+
+impl TransportProtocol {
+    /// Get the port number associated with the transport protocol.
+    pub fn port(&self) -> u16 {
+        match self {
+            TransportProtocol::Tcp(p)
+            | TransportProtocol::Udp(p)
+            | TransportProtocol::TlsOverTcp(p)
+            | TransportProtocol::Quic(p)
+            | TransportProtocol::Ws(p)
+            | TransportProtocol::Wss(p)
+            | TransportProtocol::WebTransport(p) => *p,
+        }
+    }
+    /// Check if the transport protocol is secure. (by TLS)
+    pub fn is_secure(&self) -> bool {
+        matches!(self, TransportProtocol::TlsOverTcp(_) | TransportProtocol::Quic(_) | TransportProtocol::Wss(_) | TransportProtocol::WebTransport(_))
+    }
+}
+
+impl fmt::Display for TransportProtocol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use TransportProtocol::*;
+        match self {
+            Tcp(port) => write!(f, "tcp/{}", port),
+            Udp(port) => write!(f, "udp/{}", port),
+            TlsOverTcp(port) => write!(f, "tls/tcp/{}", port),
+            Quic(port) => write!(f, "quic/{}", port),
+            Ws(port) => write!(f, "ws/{}", port),
+            Wss(port) => write!(f, "wss/{}", port),
+            WebTransport(port) => write!(f, "wtr/{}", port),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
