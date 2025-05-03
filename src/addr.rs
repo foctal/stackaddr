@@ -216,7 +216,7 @@ impl StackAddr {
     /// Extract the transport protocol (if any) from the address.
     pub fn transport(&self) -> Option<TransportProtocol> {
         let mut port = None;
-        for seg in self.segments.iter().rev() {
+        for seg in self.segments.iter() {
             match seg {
                 Segment::Protocol(Protocol::Tcp(p)) => port = Some(TransportProtocol::Tcp(*p)),
                 Segment::Protocol(Protocol::Udp(p)) => port = Some(TransportProtocol::Udp(*p)),
@@ -269,12 +269,11 @@ impl StackAddr {
 
     /// Get the port number from the stack address.
     pub fn port(&self) -> Option<u16> {
-        for seg in self.segments.iter().rev() {
+        for seg in self.segments.iter() {
             if let Segment::Protocol(p) = seg {
                 match p {
                     Protocol::Tcp(p) => return Some(*p),
                     Protocol::Udp(p) => return Some(*p),
-                    Protocol::Quic => return Some(443),
                     Protocol::Ws(p) => return Some(*p),
                     Protocol::Wss(p) => return Some(*p),
                     Protocol::WebTransport(p) => return Some(*p),
@@ -542,7 +541,7 @@ mod tests {
     fn random_bytes32() -> Bytes {
         use rand::RngCore;
         let mut buf = [0u8; 32];
-        rand::thread_rng().fill_bytes(&mut buf);
+        rand::rng().fill_bytes(&mut buf);
         Bytes::copy_from_slice(&buf)
     }
 
