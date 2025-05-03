@@ -14,13 +14,13 @@ readme = "README.md"
 serde = { version = "1", features = ["derive"], optional = true }
 bytes = { version = "1", features = [] }
 base32 = { version = "0.5" }
-uuid = { version = "1.9", features = [] }
+uuid = { version = "1.16", features = [] }
 netdev = { version = "0.34", default-features = false, features = [] }
 
 [dev-dependencies]
 serde_json = "1.0"
-rand = "0.8"
-uuid = { version = "1.9", features = ["v4", "fast-rng"]}
+rand = "0.9"
+uuid = { version = "1.16", features = ["v4", "fast-rng"]}
 
 [features]
 #default = ["serde"]

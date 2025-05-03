@@ -6,7 +6,7 @@ use stackaddr::{Identity, MacAddr, Protocol, StackAddr};
 fn random_bytes32() -> Bytes {
     use rand::RngCore;
     let mut buf = [0u8; 32];
-    rand::thread_rng().fill_bytes(&mut buf);
+    rand::rng().fill_bytes(&mut buf);
     Bytes::copy_from_slice(&buf)
 }
 
