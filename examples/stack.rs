@@ -11,13 +11,12 @@ fn random_bytes32() -> Bytes {
 }
 
 fn main() {
-    let id = random_bytes32();
     let addr = StackAddr::empty()
         .with_protocol(Protocol::Mac(MacAddr::from_hex_format("aa:bb:cc:dd:ee:ff")))
         .with_protocol(Protocol::Ip4("192.168.10.10".parse().unwrap()))
         .with_protocol(Protocol::Udp(4433))
         .with_protocol(Protocol::Quic)
-        .with_identity(Identity::NodeId(id.clone()));
+        .with_identity(Identity::NodeId(random_bytes32()));
 
     println!("{}", addr);
 }
