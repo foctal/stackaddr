@@ -101,7 +101,7 @@ pub enum TransportProtocol {
     /// UDP port
     Udp(u16),
     /// TLS (over TCP)
-    TlsOverTcp(u16),
+    TlsTcp(u16),
     /// QUIC (over UDP)
     Quic(u16),
     /// WebSocket with port
@@ -118,7 +118,7 @@ impl TransportProtocol {
         match self {
             TransportProtocol::Tcp(p)
             | TransportProtocol::Udp(p)
-            | TransportProtocol::TlsOverTcp(p)
+            | TransportProtocol::TlsTcp(p)
             | TransportProtocol::Quic(p)
             | TransportProtocol::Ws(p)
             | TransportProtocol::Wss(p)
@@ -129,7 +129,7 @@ impl TransportProtocol {
     pub fn is_secure(&self) -> bool {
         matches!(
             self,
-            TransportProtocol::TlsOverTcp(_)
+            TransportProtocol::TlsTcp(_)
                 | TransportProtocol::Quic(_)
                 | TransportProtocol::Wss(_)
                 | TransportProtocol::WebTransport(_)
@@ -143,7 +143,7 @@ impl fmt::Display for TransportProtocol {
         match self {
             Tcp(port) => write!(f, "tcp/{}", port),
             Udp(port) => write!(f, "udp/{}", port),
-            TlsOverTcp(port) => write!(f, "tls/tcp/{}", port),
+            TlsTcp(port) => write!(f, "tls/tcp/{}", port),
             Quic(port) => write!(f, "quic/{}", port),
             Ws(port) => write!(f, "ws/{}", port),
             Wss(port) => write!(f, "wss/{}", port),
