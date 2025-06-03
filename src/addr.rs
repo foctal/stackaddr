@@ -227,7 +227,7 @@ impl StackAddr {
                 }
                 Segment::Protocol(Protocol::Tls) => {
                     if let Some(TransportProtocol::Tcp(p)) = port {
-                        return Some(TransportProtocol::TlsOverTcp(p));
+                        return Some(TransportProtocol::TlsTcp(p));
                     }
                 }
                 Segment::Protocol(Protocol::Ws(p)) => return Some(TransportProtocol::Ws(*p)),

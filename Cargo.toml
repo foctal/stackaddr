@@ -1,6 +1,6 @@
 [package]
 name = "stackaddr"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
 authors = ["shellrow <shellrow@fortnium.com>"]
 description = "Self-describing, layered network address representation, with flexible protocol stacks."
@@ -14,13 +14,13 @@ readme = "README.md"
 serde = { version = "1", features = ["derive"], optional = true }
 bytes = { version = "1", features = [] }
 base32 = { version = "0.5" }
-uuid = { version = "1.16", features = [] }
-netdev = { version = "0.34", default-features = false, features = [] }
+uuid = { version = "1.17", features = [] }
+netdev = { version = "0.35", default-features = false, features = [] }
 
 [dev-dependencies]
 serde_json = "1.0"
 rand = "0.9"
-uuid = { version = "1.16", features = ["v4", "fast-rng"]}
+uuid = { version = "1.17", features = ["v4", "fast-rng"]}
 
 [features]
 #default = ["serde"]
