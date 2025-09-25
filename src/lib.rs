@@ -39,8 +39,8 @@ pub mod error;
 
 pub use addr::StackAddr;
 pub use error::StackAddrError;
+pub use segment::Segment;
 pub use segment::identity::Identity;
 pub use segment::protocol::Protocol;
-pub use segment::Segment;
 
 pub use netdev::mac::MacAddr;
