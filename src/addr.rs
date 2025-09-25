@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::StackAddrError,
     segment::{
+        Segment,
         identity::Identity,
         protocol::{Protocol, TransportProtocol},
-        Segment,
     },
 };
 use std::{
@@ -84,10 +84,18 @@ impl StackAddr {
 
     /// Create a new `StackAddr` with a MAC address segment.
     /// This is a convenience method for creating a stack address with builder pattern.
-    pub fn with_mac(mut self, addr: &str) -> Self {
-        self.segments
-            .push(Segment::Protocol(Protocol::Mac(addr.parse().unwrap())));
+    pub fn with_mac(mut self, addr: MacAddr) -> Self {
+        self.segments.push(Segment::Protocol(Protocol::Mac(addr)));
         self
+    }
+
+    /// Create a new `StackAddr` with a MAC address segment from a string.
+    pub fn try_with_mac_str(mut self, addr: &str) -> Result<Self, StackAddrError> {
+        let mac: MacAddr = addr
+            .parse()
+            .map_err(|_e| StackAddrError::InvalidEncoding("mac"))?;
+        self.segments.push(Segment::Protocol(Protocol::Mac(mac)));
+        Ok(self)
     }
 
     /// Create a new `StackAddr` with an IPv4 address segment.
@@ -233,7 +241,7 @@ impl StackAddr {
                 Segment::Protocol(Protocol::Ws(p)) => return Some(TransportProtocol::Ws(*p)),
                 Segment::Protocol(Protocol::Wss(p)) => return Some(TransportProtocol::Wss(*p)),
                 Segment::Protocol(Protocol::WebTransport(p)) => {
-                    return Some(TransportProtocol::WebTransport(*p))
+                    return Some(TransportProtocol::WebTransport(*p));
                 }
                 _ => continue,
             }
@@ -287,7 +295,7 @@ impl StackAddr {
     /// Get the socket address from the stack address.
     pub fn socket_addr(&self) -> Option<SocketAddr> {
         let ip = self.ip()?;
-        let port = self.port().unwrap_or(0);
+        let port = self.port()?;
         Some(SocketAddr::new(ip, port))
     }
 
@@ -297,7 +305,7 @@ impl StackAddr {
             if let Segment::Protocol(p) = seg {
                 match p {
                     Protocol::Dns(name) | Protocol::Dns4(name) | Protocol::Dns6(name) => {
-                        return Some(name)
+                        return Some(name);
                     }
                     _ => {}
                 }
@@ -534,7 +542,7 @@ impl FromStr for StackAddr {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::segment::{identity::Identity, protocol::Protocol, Segment};
+    use crate::segment::{Segment, identity::Identity, protocol::Protocol};
     use bytes::Bytes;
     use std::net::{IpAddr, Ipv6Addr};
 
