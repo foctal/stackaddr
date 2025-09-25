@@ -297,7 +297,7 @@ impl StackAddr {
     /// Get the socket address from the stack address.
     pub fn socket_addr(&self) -> Option<SocketAddr> {
         let ip = self.ip()?;
-        let port = self.port().unwrap_or(0);
+        let port = self.port()?;
         Some(SocketAddr::new(ip, port))
     }
 
