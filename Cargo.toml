@@ -2,12 +2,12 @@
 name = "stackaddr"
 version = "0.6.0"
 edition = "2021"
-authors = ["shellrow <shellrow@fortnium.com>"]
+authors = ["shellrow <shellrow@foctal.com>"]
 description = "Self-describing, layered network address representation, with flexible protocol stacks."
 keywords = ["network", "address", "protocol", "stack"]
 categories = ["network-programming", "data-structures"]
 license = "MIT"
-repository = "https://github.com/fortnium/stackaddr"
+repository = "https://github.com/foctal/stackaddr"
 readme = "README.md"
 
 [dependencies]
