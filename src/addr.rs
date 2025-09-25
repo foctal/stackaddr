@@ -84,10 +84,20 @@ impl StackAddr {
 
     /// Create a new `StackAddr` with a MAC address segment.
     /// This is a convenience method for creating a stack address with builder pattern.
-    pub fn with_mac(mut self, addr: &str) -> Self {
+    pub fn with_mac(mut self, addr: MacAddr) -> Self {
         self.segments
-            .push(Segment::Protocol(Protocol::Mac(addr.parse().unwrap())));
+            .push(Segment::Protocol(Protocol::Mac(addr)));
         self
+    }
+
+    /// Create a new `StackAddr` with a MAC address segment from a string.
+    pub fn try_with_mac_str(mut self, addr: &str) -> Result<Self, StackAddrError> {
+        let mac: MacAddr = addr
+            .parse()
+            .map_err(|_e| StackAddrError::InvalidEncoding("mac"))?;
+        self.segments
+            .push(Segment::Protocol(Protocol::Mac(mac)));
+        Ok(self)
     }
 
     /// Create a new `StackAddr` with an IPv4 address segment.
