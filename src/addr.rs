@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use netdev::mac::MacAddr;
+use mac_addr::MacAddr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 

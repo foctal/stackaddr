@@ -13,7 +13,7 @@
 //!
 //! This enum is designed for composability within a [`StackAddr`](crate::StackAddr).
 
-use netdev::mac::MacAddr;
+use mac_addr::MacAddr;
 use std::{
     fmt,
     net::{Ipv4Addr, Ipv6Addr},
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_display_macaddr() {
-        use netdev::mac::MacAddr;
+        use mac_addr::MacAddr;
         let mac = MacAddr::new(0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff);
         let proto = vec![
             Protocol::Mac(mac),

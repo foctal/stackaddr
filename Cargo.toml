@@ -15,7 +15,7 @@ serde = { version = "1", features = ["derive"], optional = true }
 bytes = { version = "1", features = [] }
 base32 = { version = "0.5" }
 uuid = { version = "1.18", features = [] }
-netdev = { version = "0.37", default-features = false, features = [] }
+mac-addr = { version = "0.3" }
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -28,7 +28,7 @@ serde = [
     "dep:serde",
     "bytes/serde",
     "uuid/serde",
-    "netdev/serde",
+    "mac-addr/serde",
 ]
 
 [[example]]
