@@ -100,4 +100,4 @@ for sock in addr.to_socket_addrs().unwrap() {
 
 ## Acknowledgment
 Inspired by [Multiaddr](https://github.com/multiformats/multiaddr),
-StackAddr inherits its core ideas while embracing Rust’s flexibility to provide a more general-purpose and extensible address representation.
+StackAddr inherits its core ideas and provide a more general-purpose and extensible address representation.
