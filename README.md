@@ -78,6 +78,26 @@ With metadata:
 let addr: StackAddr = "/meta/env/production".parse().unwrap();
 ```
 
+Resolving to socket addresses:
+```rust
+use std::net::ToSocketAddrs;
+
+let addr: StackAddr = "/dns/localhost/tcp/443".parse().unwrap();
+
+// Structured host/port extraction
+let (host, port) = addr.host_port().unwrap();
+assert_eq!((host.as_str(), port), ("localhost", 443));
+
+// System resolution for libraries expecting concrete socket addresses
+let addrs = addr.socket_addrs().unwrap();
+assert!(!addrs.is_empty());
+
+// Or hand it directly to APIs that accept `ToSocketAddrs`
+for sock in addr.to_socket_addrs().unwrap() {
+    println!("Resolved: {}", sock);
+}
+```
+
 ## Acknowledgment
 Inspired by [Multiaddr](https://github.com/multiformats/multiaddr),
 StackAddr inherits its core ideas while embracing Rust’s flexibility to provide a more general-purpose and extensible address representation.
