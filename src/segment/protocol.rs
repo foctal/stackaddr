@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 
 /// A protocol segment used to build layered network addresses.
 ///
-/// Each variant represents a well-known protocol at different layers (L2–L7),
+/// Each variant represents a well-known protocol at different layers (L2-L7),
 /// or a custom protocol. All variants are rendered as `/<name>/<value>` strings.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

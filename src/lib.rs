@@ -5,7 +5,7 @@
 //! supporting both traditional transport protocols and identity-aware addressing.
 //!
 //! ## Features
-//! - Multi-layered address structure (L2–L7)
+//! - Multi-layered address structure (L2-L7)
 //! - Protocol segments: `/ip4/127.0.0.1/tcp/443/tls/http`
 //!     - Also, supports L2 MAC addresses like `/mac/aa:bb:cc:dd:ee:ff`.
 //! - Identity segments: `/node/<base32>`, `/uuid/<uuid>`
