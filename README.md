@@ -25,13 +25,13 @@ Self-describing, layered address representation library, designed with flexibili
 Add `stackaddr` to your dependencies:  
 ```toml:Cargo.toml
 [dependencies]
-stackaddr = "0.7"
+stackaddr = "0.8"
 ```
 
 To enable serde support:
 ```
 [dependencies]
-stackaddr = { version = "0.7", features = ["serde"] }
+stackaddr = { version = "0.8", features = ["serde"] }
 ```
 
 ## Example
