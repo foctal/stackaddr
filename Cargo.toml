@@ -1,21 +1,22 @@
 [package]
 name = "stackaddr"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 authors = ["shellrow <shellrow@foctal.com>"]
 description = "Self-describing, layered network address representation, with flexible protocol stacks."
 keywords = ["network", "address", "protocol", "stack"]
 categories = ["network-programming", "data-structures"]
 license = "MIT"
-repository = "https://github.com/foctal/stackaddr"
+repository = "https://github.com/shellrow/stackaddr"
 readme = "README.md"
 
 [dependencies]
 serde = { version = "1", features = ["derive"], optional = true }
 bytes = { version = "1", features = [] }
 base32 = { version = "0.5" }
+base64 = { version = "0.22" }
 uuid = { version = "1.18", features = [] }
-netdev = { version = "0.37", default-features = false, features = [] }
+mac-addr = { version = "0.3" }
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -28,7 +29,7 @@ serde = [
     "dep:serde",
     "bytes/serde",
     "uuid/serde",
-    "netdev/serde",
+    "mac-addr/serde",
 ]
 
 [[example]]

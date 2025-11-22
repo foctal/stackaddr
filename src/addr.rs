@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use netdev::mac::MacAddr;
+use mac_addr::MacAddr;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -12,8 +12,8 @@ use crate::{
     },
 };
 use std::{
-    fmt,
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+    fmt, io,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
     str::FromStr,
 };
 use uuid::Uuid;
@@ -299,6 +299,37 @@ impl StackAddr {
         Some(SocketAddr::new(ip, port))
     }
 
+    /// Get the host (IP or DNS) and port pair, returning an error when either is missing.
+    pub fn host_port(&self) -> Result<(String, u16), StackAddrError> {
+        let port = self
+            .port()
+            .ok_or(StackAddrError::MissingPart("transport port"))?;
+
+        if let Some(ip) = self.ip() {
+            return Ok((ip.to_string(), port));
+        }
+
+        if let Some(name) = self.name() {
+            return Ok((name.to_string(), port));
+        }
+
+        Err(StackAddrError::MissingPart("ip or dns name"))
+    }
+
+    /// Resolve the address into concrete [`SocketAddr`] values using the system resolver.
+    ///
+    /// This helper makes it easy to hand a `StackAddr` directly to networking libraries
+    /// that expect socket addresses or types implementing [`ToSocketAddrs`]. It will
+    /// return an error when host or port information is missing, or if DNS resolution
+    /// fails.
+    pub fn socket_addrs(&self) -> Result<Vec<SocketAddr>, StackAddrError> {
+        let (host, port) = self.host_port()?;
+        (host.as_str(), port)
+            .to_socket_addrs()
+            .map_err(|e| StackAddrError::ResolutionFailed(e.to_string()))
+            .map(|iter| iter.collect())
+    }
+
     /// Get the DNS name from the stack address.
     pub fn name(&self) -> Option<&str> {
         for seg in &self.segments {
@@ -539,6 +570,19 @@ impl FromStr for StackAddr {
     }
 }
 
+impl ToSocketAddrs for StackAddr {
+    type Iter = std::vec::IntoIter<SocketAddr>;
+
+    fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
+        let (host, port) = self
+            .host_port()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e.to_string()))?;
+        (host.as_str(), port)
+            .to_socket_addrs()
+            .map(|iter| iter.collect::<Vec<_>>().into_iter())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -642,6 +686,51 @@ mod tests {
         ]);
 
         assert_eq!(addr, expected);
+    }
+
+    #[test]
+    fn test_host_port_and_resolution() {
+        let addr: StackAddr = "/ip4/127.0.0.1/tcp/8080".parse().unwrap();
+
+        let (host, port) = addr.host_port().expect("host and port missing");
+        assert_eq!(host, "127.0.0.1");
+        assert_eq!(port, 8080);
+
+        let resolved = addr.socket_addrs().expect("resolution failed");
+
+        assert!(
+            resolved
+                .iter()
+                .any(|sock| sock.ip().is_loopback() && sock.port() == 8080)
+        );
+    }
+
+    #[test]
+    fn test_dns_host_port() {
+        let addr: StackAddr = "/dns/localhost/tcp/80".parse().unwrap();
+        let (host, port) = addr.host_port().expect("host and port missing");
+
+        assert_eq!(host, "localhost");
+        assert_eq!(port, 80);
+
+        let resolved = addr.socket_addrs().expect("resolution failed");
+        assert!(!resolved.is_empty());
+    }
+
+    #[test]
+    fn test_to_socket_addrs_trait_support() {
+        use std::net::ToSocketAddrs;
+
+        let addr: StackAddr = "/ip4/127.0.0.1/tcp/443".parse().unwrap();
+        let resolved: Vec<_> = ToSocketAddrs::to_socket_addrs(&addr)
+            .expect("trait resolution failed")
+            .collect();
+
+        assert!(
+            resolved
+                .iter()
+                .any(|sock| sock.ip().is_loopback() && sock.port() == 443)
+        );
     }
 
     #[test]

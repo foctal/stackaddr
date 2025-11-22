@@ -19,6 +19,9 @@ pub enum StackAddrError {
 
     /// Invalid encoding encountered.
     InvalidEncoding(&'static str),
+
+    /// Name resolution failed when trying to derive socket addresses.
+    ResolutionFailed(String),
 }
 
 impl fmt::Display for StackAddrError {
@@ -29,6 +32,13 @@ impl fmt::Display for StackAddrError {
             StackAddrError::InvalidPort(e) => write!(f, "Invalid port: {}", e),
             StackAddrError::UnknownProtocol(p) => write!(f, "Unknown protocol: {}", p),
             StackAddrError::InvalidEncoding(e) => write!(f, "Invalid encoding: {}", e),
+            StackAddrError::ResolutionFailed(e) => {
+                write!(
+                    f,
+                    "Failed to resolve host while building socket address: {}",
+                    e
+                )
+            }
         }
     }
 }
