@@ -58,7 +58,10 @@ impl Identity {
 
     /// Encodes the identity bytes as base32 (RFC4648, no padding).
     pub fn to_base32(&self) -> String {
-        base32::encode(base32::Alphabet::Rfc4648 { padding: false }, self.id_bytes())
+        base32::encode(
+            base32::Alphabet::Rfc4648 { padding: false },
+            self.id_bytes(),
+        )
     }
 
     /// Encodes the identity bytes as URL-safe base64 without padding.
@@ -220,8 +223,7 @@ mod tests {
         let id = random_bytes32();
         let encoded = base32::encode(base32::Alphabet::Rfc4648 { padding: false }, &id);
 
-        let identity =
-            Identity::from_base32_custom("myproto", &encoded).expect("decode failed");
+        let identity = Identity::from_base32_custom("myproto", &encoded).expect("decode failed");
 
         match identity {
             Identity::Custom { kind, id: bytes } => {

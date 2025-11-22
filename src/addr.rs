@@ -12,8 +12,7 @@ use crate::{
     },
 };
 use std::{
-    io,
-    fmt,
+    fmt, io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
     str::FromStr,
 };
